@@ -34,19 +34,18 @@ class TraderApp:
             max_leverage=float(r.get("max_leverage", 3)),
         )
 
-        # 指标服务
         metrics_cfg = config.get("metrics", {})
         if bool(metrics_cfg.get("enable", True)):
             start_metrics_server(int(metrics_cfg.get("port", 9108)))
 
-        # 私有客户端（实盘）
         private_client = None
         if not bool(config.get("paper_trading", True)):
             api_key = os.getenv("OKX_API_KEY")
             api_secret = os.getenv("OKX_API_SECRET")
             passphrase = os.getenv("OKX_API_PASSPHRASE")
+            simulated = bool(config.get("api", {}).get("simulated", False))
             if api_key and api_secret and passphrase:
-                private_client = OkxPrivateClient(api_key, api_secret, passphrase, base_url=config.get("api", {}).get("base_url", "https://www.okx.com"))
+                private_client = OkxPrivateClient(api_key, api_secret, passphrase, base_url=config.get("api", {}).get("base_url", "https://www.okx.com"), simulated=simulated)
             else:
                 logger.warning("未提供 OKX 私有 API 密钥，自动回退为纸面交易模式。")
                 config["paper_trading"] = True
@@ -81,7 +80,6 @@ class TraderApp:
             logger.info(f"交易 {inst_id} {sig.action} 原因={sig.reason} -> {res.message}")
 
     async def _position_sync_loop(self) -> None:
-        """实盘：定期同步仓位（中文注释）。"""
         if bool(self.config.get("paper_trading", True)):
             return
         while True:

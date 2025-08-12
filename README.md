@@ -43,6 +43,14 @@ OKX_API_KEY=你的key
 OKX_API_SECRET=你的secret
 OKX_API_PASSPHRASE=你的passphrase
 OKX_API_BASE=https://www.okx.com
+# 如使用 OKX 模拟盘（demo）：设置此环境变量，系统将自动加上 x-simulated-trading 头
+OKX_SIMULATED=1
+```
+- 或者在 `config.yaml` 中设置：
+```
+api:
+  base_url: https://www.okx.com
+  simulated: true   # 使用模拟盘
 ```
 - 关闭纸面模式：`python3 run.py trade --no-paper` 或在 `config.yaml` 设置 `paper_trading: false`。
 - 重要说明：本项目对合约张数 `sz` 采用简化计算（名义资金/价格），不同币种合约面值与精度可能存在偏差，实盘前务必核对合约面值与最小下单量、步长等规则。
@@ -70,6 +78,8 @@ OKX_API_BASE=https://www.okx.com
 - `ws.public_url`：OKX 公共 WS 地址
 - `analysis.*`：ATR 分析参数与周期
 - `metrics.enable/port`：Prometheus 指标服务开关与端口
+- `api.base_url`：OKX 基础地址
+- `api.simulated`：是否使用模拟盘（true 将自动携带 `x-simulated-trading: 1`）
 
 ## 重要提示
 - 市场有风险，策略无保证盈利；请小额资金、模拟盘充分验证后谨慎实盘。

@@ -15,4 +15,9 @@ def load_config(path: str = "config.yaml") -> Dict[str, Any]:
         cfg.setdefault("api", {})
         cfg["api"]["base_url"] = api_base
 
+    sim_env = os.getenv("OKX_SIMULATED")
+    if sim_env is not None:
+        cfg.setdefault("api", {})
+        cfg["api"]["simulated"] = sim_env.strip().lower() in ("1", "true", "yes")
+
     return cfg

@@ -87,15 +87,13 @@ class OkxPublicWs:
 
 
 class OkxPrivateClient:
-    """OKX 私有 REST 客户端，用于实盘下单、查询仓位等（中文注释）。
-    说明：签名规则为 base64(hmac_sha256(secret, timestamp + method + path + body))。
-    时间戳使用 ISO8601 毫秒格式，UTC 时区。
-    """
-    def __init__(self, api_key: str, api_secret: str, passphrase: str, base_url: str = "https://www.okx.com") -> None:
+    """OKX 私有 REST 客户端（中文注释）。支持模拟盘请求头与带查询参数签名。"""
+    def __init__(self, api_key: str, api_secret: str, passphrase: str, base_url: str = "https://www.okx.com", simulated: bool = False) -> None:
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.api_secret = api_secret
         self.passphrase = passphrase
+        self.simulated = simulated
         self._client = httpx.AsyncClient(base_url=self.base_url, timeout=httpx.Timeout(10.0, read=20.0))
 
     async def aclose(self) -> None:
@@ -104,35 +102,40 @@ class OkxPrivateClient:
     def _ts(self) -> str:
         return datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z")
 
-    def _sign(self, ts: str, method: str, path: str, body: str) -> str:
-        msg = f"{ts}{method.upper()}{path}{body}".encode("utf-8")
+    def _sign(self, ts: str, method: str, request_path: str, body: str) -> str:
+        msg = f"{ts}{method.upper()}{request_path}{body}".encode("utf-8")
         sig = hmac.new(self.api_secret.encode("utf-8"), msg, sha256).digest()
         return base64.b64encode(sig).decode()
 
     async def _request(self, method: str, path: str, json_body: Optional[Dict[str, Any]] = None, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        # 组装用于签名的 request_path（包含查询字符串）
+        query = httpx.QueryParams(params or {})
+        request_path = path
+        if str(query):
+            request_path = f"{path}?{str(query)}"
         body = json.dumps(json_body) if json_body else ""
         ts = self._ts()
-        sig = self._sign(ts, method, path, body)
+        sig = self._sign(ts, method, request_path, body)
         headers = {
             "OK-ACCESS-KEY": self.api_key,
             "OK-ACCESS-SIGN": sig,
             "OK-ACCESS-TIMESTAMP": ts,
             "OK-ACCESS-PASSPHRASE": self.passphrase,
             "Content-Type": "application/json",
+            "Accept": "application/json",
         }
+        if self.simulated:
+            headers["x-simulated-trading"] = "1"
         r = await self._client.request(method, path, headers=headers, params=params, content=body if body else None)
         r.raise_for_status()
         return r.json()
 
     async def place_order(self, inst_id: str, side: str, sz: str, td_mode: str = "cross", ord_type: str = "market") -> Dict[str, Any]:
-        """下单接口：默认使用逐仓/全仓 cross，市价单 ord_type=market。
-        注意：OKX 合约的 sz 单位为合约张数，本项目简单按 价格≈名义/价格，可能和合约面值有差异，实盘前请验证合约面值与大小精度。
-        """
         path = "/api/v5/trade/order"
         body = {
             "instId": inst_id,
             "tdMode": td_mode,
-            "side": side,  # buy/sell
+            "side": side,
             "ordType": ord_type,
             "sz": str(sz),
         }
