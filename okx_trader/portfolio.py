@@ -1,42 +1,63 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, Tuple
 
 
 @dataclass
 class Position:
+    """本地持仓模型（中文注释）。
+    side: 持仓方向（long/short/none）
+    size: 张数
+    avg_price: 持仓均价
+    """
     side: str  # long/short/none
     size: float
     avg_price: float
 
-    def update_with_fill(self, side: str, fill_size: float, fill_price: float) -> None:
+    def apply_fill(self, side: str, fill_size: float, fill_price: float) -> float:
+        """应用一次成交并返回已实现盈亏（USDT）。
+        逻辑：
+        - 同向加仓：加权更新均价与张数；无已实现盈亏。
+        - 反向减仓：按持仓均价与成交价计算已实现盈亏，并减少张数；若张数归零则方向置 none。
+        """
+        realized_pnl = 0.0
         if side == "buy":
             if self.side in ("none", "long"):
+                # 加多仓
                 new_notional = self.avg_price * self.size + fill_price * fill_size
                 self.size += fill_size
                 self.side = "long"
                 self.avg_price = 0.0 if self.size == 0 else new_notional / self.size
-            else:  # reducing short
-                self.size -= fill_size
+            else:
+                # 平空仓（反向）
+                close_size = min(self.size, fill_size)
+                realized_pnl += (self.avg_price - fill_price) * close_size
+                self.size -= close_size
                 if self.size <= 0:
                     self.side = "none"
                     self.size = 0.0
                     self.avg_price = 0.0
         elif side == "sell":
             if self.side in ("none", "short"):
+                # 加空仓
                 new_notional = self.avg_price * self.size + fill_price * fill_size
                 self.size += fill_size
                 self.side = "short"
                 self.avg_price = 0.0 if self.size == 0 else new_notional / self.size
-            else:  # reducing long
-                self.size -= fill_size
+            else:
+                # 平多仓（反向）
+                close_size = min(self.size, fill_size)
+                realized_pnl += (fill_price - self.avg_price) * close_size
+                self.size -= close_size
                 if self.size <= 0:
                     self.side = "none"
                     self.size = 0.0
                     self.avg_price = 0.0
+        return realized_pnl
 
 
 class RiskManager:
+    """风险控制（中文注释）。"""
     def __init__(self, total_usdt: float, per_step_pct: float, max_symbols: int, max_leverage: float) -> None:
         self.total_usdt = total_usdt
         self.per_step_pct = per_step_pct

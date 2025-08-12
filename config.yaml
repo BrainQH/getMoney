@@ -1,19 +1,19 @@
-paper_trading: true
+paper_trading: true  # 是否纸面交易（默认开启）
 quote_ccy: USDT
 inst_type: SWAP
 top_n: 20
 log_level: INFO
 
 strategy:
-  step_pct: 0.10         # 10% step move
-  rebound_pct: 0.02      # 2% rebound/pullback
-  max_dca_steps: 4
-  take_profit_pct: 0.12  # optional additional TP if moves strongly
-  stop_loss_pct: 0.15    # fail-safe stop loss
+  step_pct: 0.10         # 阶梯幅度（10%）
+  rebound_pct: 0.02      # 反向回撤/反弹幅度（2%）
+  max_dca_steps: 4       # 最大定投步数
+  take_profit_pct: 0.12  # 兜底止盈
+  stop_loss_pct: 0.15    # 兜底止损
 
 risk:
-  total_usdt: 10000
-  per_step_allocation_pct: 0.02  # 2% of total per DCA step per symbol
+  total_usdt: 10000                 # 资金规模估计
+  per_step_allocation_pct: 0.02     # 每步（每次加仓）投入占比
   max_symbols: 6
   max_leverage: 3
 
@@ -28,6 +28,10 @@ analysis:
   atr_window: 14
   atr_k_step: 4.0
   rebound_fraction_of_step: 0.2
+
+metrics:
+  enable: true
+  port: 9108
 
 state:
   path: .state/state.json
