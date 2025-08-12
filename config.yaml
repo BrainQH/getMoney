@@ -1,0 +1,33 @@
+paper_trading: true
+quote_ccy: USDT
+inst_type: SWAP
+top_n: 20
+log_level: INFO
+
+strategy:
+  step_pct: 0.10         # 10% step move
+  rebound_pct: 0.02      # 2% rebound/pullback
+  max_dca_steps: 4
+  take_profit_pct: 0.12  # optional additional TP if moves strongly
+  stop_loss_pct: 0.15    # fail-safe stop loss
+
+risk:
+  total_usdt: 10000
+  per_step_allocation_pct: 0.02  # 2% of total per DCA step per symbol
+  max_symbols: 6
+  max_leverage: 3
+
+ws:
+  public_url: wss://ws.okx.com:8443/ws/v5/public
+
+analysis:
+  enable_scheduler: false
+  interval_minutes: 60
+  history_timeframe: 1H
+  lookback_candles: 500
+  atr_window: 14
+  atr_k_step: 4.0
+  rebound_fraction_of_step: 0.2
+
+state:
+  path: .state/state.json
